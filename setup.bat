@@ -15,13 +15,15 @@ if %errorlevel% equ 0 (
 ) else (
     echo Winget is not installed. Starting installation...
 
-    :: Check for admin privileges
-    net session >nul 2>&1
-    if %errorlevel% neq 0 (
-        echo ERROR: Administrator privileges required. Please run as administrator.
-        pause
-        exit /b 1
-    )
+
+:: Check for admin privileges
+net session >nul 2>&1
+if !errorlevel! neq 0 (
+    echo ERROR: Administrator privileges required. Please run as administrator.
+    pause
+    exit /b 1
+)
+
 
     :: Quick Windows version check (must be Windows 10 1809+ or Windows 11)
     for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
