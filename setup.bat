@@ -1,119 +1,87 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: ---------- 1. Check Internet ----------
-echo Checking internet connection...
-ping -n 1 1.1.1.1 >nul
-if errorlevel 1 (
-    echo [ERROR] No internet connection.
-)
-pause
+REM ===================== CONFIGURATION =====================
+SET REPO_URL= https://github.com/roshnipai05/ysp-exercises.git
+SET REPO_NAME= ysp-exercises
+SET PYTHON_INSTALLER=https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe
+SET VSCODE_INSTALLER=https://update.code.visualstudio.com/latest/win32-x64-user/stable
+SET GIT_INSTALLER=https://github.com/git-for-windows/git/releases/download/v2.44.0.windows.1/Git-2.44.0-64-bit.exe
+SET REQUIREMENTS_URL=https://github.com/roshnipai05/ysp-exercises/blob/main/requirements.txt 
 
-:: ---------- 2. Install Git if missing ----------
+REM ===================== CHECK FOR GIT =====================
 where git >nul 2>nul
-if errorlevel 1 (
-    echo Git not found. Installing Git...
-    winget install --id Git.Git -e --silent
-    set GIT_JUST_INSTALLED=1
-) else (
-    echo Git is already installed.
+IF %ERRORLEVEL% NEQ 0 (
+    echo [INFO] Git not found. Downloading Git...
+    powershell -Command "Invoke-WebRequest -Uri %GIT_INSTALLER% -OutFile git-installer.exe"
+    start /wait git-installer.exe /VERYSILENT
+    del git-installer.exe
+) ELSE (
+    echo [INFO] Git is already installed.
 )
 
-:: ---------- 3. Install VSCode if missing ----------
-where code >nul 2>nul
-if errorlevel 1 (
-    echo VSCode not found. Installing VSCode...
-    winget install --id Microsoft.VisualStudioCode -e --silent
-    set CODE_JUST_INSTALLED=1
-) else (
-    echo VSCode is already installed.
-)
-pause
+REM ========== CHECK FOR PYTHON >= 3.10 AND FUNCTIONAL ===========
+SET PYTHON=
+SET PYTHON_VERSION_OK=0
 
-echo PLEASEPLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE
+> check_version.py echo import sys
+>> check_version.py echo major, minor = sys.version_info[:2]
+>> check_version.py echo exit(0) if (major > 3 or (major == 3 and minor >= 10)) else exit(1)
 
-:: ---------- 4. Refresh PATH if needed ----------
-if defined GIT_JUST_INSTALLED (
-    echo Adding Git to PATH...
-    set "GIT_PATH=C:\Program Files\Git\cmd"
-    setx PATH "%PATH%;%GIT_PATH%"
-)
-
-if defined CODE_JUST_INSTALLED (
-    echo Adding VSCode to PATH...
-    set "CODE_PATH=%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
-    setx PATH "%PATH%;%CODE_PATH%"
-)
-
-echo BLAHBLAHBLAHBLAHBLAHBLAHBLAHBLA!!!!!!!!!!!!!
-
-:: Refresh session PATH (for immediate use)
-set "PATH=%PATH%;C:\Program Files\Git\cmd"
-set "PATH=%PATH%;%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
-
-:: ---------- 5. Confirm VSCode CLI is available ----------
-where code >nul 2>nul
-if errorlevel 1 (
-    echo [ERROR] VSCode CLI 'code' still not recognized. Please restart terminal and re-run script.
-)
-pause
-
-:: ---------- 6. Install VSCode Extensions ----------
-echo Installing VSCode Extensions...
-code --install-extension ms-python.python
-code --install-extension ms-python.vscode-pylance
-code --install-extension ms-toolsai.jupyter
-code --install-extension formulahendry.terminal
-code --install-extension kisstkondoros.vscode-gutter-preview
-
-:: ---------- 7. Clone Repository ----------
-if not exist ysp-exercises (
-    echo Cloning GitHub repository...
-    git clone https://github.com/roshnipai05/ysp-exercises
-    if errorlevel 1 (
-        echo [ERROR] Failed to clone repository. Check your internet or GitHub access.
+FOR %%P IN (python python3 py) DO (
+    %%P check_version.py >nul 2>nul
+    IF !ERRORLEVEL! == 0 (
+        SET PYTHON=%%P
+        SET PYTHON_VERSION_OK=1
+        GOTO FoundPython
     )
-    pause
-) else (
-    echo Repository folder already exists. Skipping clone.
 )
 
-cd ysp-exercises
+DEL check_version.py
 
-:: ---------- 8. Create and Activate Virtual Environment ----------
-echo Creating virtual environment...
-python -m venv venv
-if errorlevel 1 (
-    echo [ERROR] Failed to create virtual environment.
-)
-pause
-
-echo Activating virtual environment...
-call venv\Scripts\activate.bat
-
-:: ---------- 9. Install Dependencies ----------
-if exist requirements.txt (
-    echo Installing dependencies from requirements.txt...
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    if errorlevel 1 (
-        echo [ERROR] Failed to install dependencies.
-    )
-    pause
-) else (
-    echo No requirements.txt found.
+:FoundPython
+IF NOT !PYTHON_VERSION_OK! EQU 1 (
+    echo [INFO] Python >= 3.10 not found or not functional. Installing Python...
+    powershell -Command "Invoke-WebRequest -Uri %PYTHON_INSTALLER% -OutFile python-installer.exe"
+    start /wait python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+    del python-installer.exe
+    SET PYTHON=python
 )
 
-:: ---------- 10. Launch VSCode in 'notebooks' Folder ----------
-if exist notebooks (
-    echo Opening 'notebooks' folder in VSCode...
-    code notebooks
-) else (
-    echo [WARNING] 'notebooks' folder not found. Opening project root instead.
-    code .
+echo [INFO] Using Python command: %PYTHON%
+
+REM ===================== CHECK FOR VSCODE =====================
+where code >nul 2>nul
+IF %ERRORLEVEL% NEQ 0 (
+    echo [INFO] VSCode not found. Downloading...
+    powershell -Command "Invoke-WebRequest -Uri %VSCODE_INSTALLER% -OutFile vscode-installer.exe"
+    start /wait vscode-installer.exe /silent
+    del vscode-installer.exe
+) ELSE (
+    echo [INFO] VSCode is already installed.
 )
 
-echo.
-echo === Setup complete! ===
-pause
+REM ===================== DOWNLOAD REPO =====================
+echo [INFO] Downloading GitHub repo as ZIP...
+powershell -Command "Invoke-WebRequest -Uri %REPO_URL%/archive/refs/heads/main.zip -OutFile repo.zip"
+powershell -Command "Expand-Archive -Path repo.zip -DestinationPath . -Force"
+ren %REPO_NAME%-main %REPO_NAME%
+del repo.zip
+
+REM ========== SET UP VIRTUAL ENVIRONMENT ==========
+cd %REPO_NAME%
+echo [INFO] Creating virtual environment...
+%PYTHON% -m venv .venv
+
+REM ========== ACTIVATE AND INSTALL DEPENDENCIES ==========
+call .venv\Scripts\activate
+powershell -Command "Invoke-WebRequest -Uri %REQUIREMENTS_URL% -OutFile requirements.txt"
+echo [INFO] Installing dependencies from requirements.txt...
+pip install -r requirements.txt
+
+REM ===================== OPEN VSCODE =====================
+cd notebooks
+echo [INFO] Opening VSCode in notebooks folder...
+code .
+
 endlocal
