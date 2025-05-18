@@ -9,67 +9,51 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: ---------- 2. Check Python version ----------
-for /f "tokens=2 delims=[] " %%A in ('python --version 2^>nul') do set PYVER=%%A
-set "MIN_VER=3.10"
-set "TARGET_VER=3.12"
-
-echo Detected Python version: %PYVER%
-for /f "tokens=1,2 delims=." %%a in ("%PYVER%") do (
-    set "MAJOR=%%a"
-    set "MINOR=%%b"
-)
-
-if not defined PYVER (
-    echo Python not found. Installing Python %TARGET_VER%...
-    winget install -e --id Python.Python.3.12
-    set PYJUSTINSTALLED=1
-) else (
-    if !MAJOR! LSS 3 (
-        echo Python version too old. Installing Python %TARGET_VER%...
-        winget install -e --id Python.Python.3.12
-        set PYJUSTINSTALLED=1
-    ) else if !MAJOR!==3 if !MINOR! LSS 10 (
-        echo Python version too old. Installing Python %TARGET_VER%...
-        winget install -e --id Python.Python.3.12
-        set PYJUSTINSTALLED=1
-    ) else (
-        echo Python version is sufficient.
-    )
-)
-
-:: If Python was just installed, refresh path
-if defined PYJUSTINSTALLED (
-    echo Waiting for Python to be added to PATH...
-    timeout /t 5
-)
-
-:: ---------- 3. Install Git ----------
+:: ---------- 2. Install Git if missing ----------
 where git >nul 2>nul
 if errorlevel 1 (
-    echo Installing Git...
-    winget install -e --id Git.Git
+    echo Git not found. Installing Git...
+    winget install --id Git.Git -e --silent
+    set GIT_JUST_INSTALLED=1
 ) else (
     echo Git is already installed.
 )
 
-:: ---------- 4. Install VSCode ----------
+:: ---------- 3. Install VSCode if missing ----------
 where code >nul 2>nul
 if errorlevel 1 (
-    echo Installing Visual Studio Code...
-    winget install -e --id Microsoft.VisualStudioCode
-    set CODEJUSTINSTALLED=1
+    echo VSCode not found. Installing VSCode...
+    winget install --id Microsoft.VisualStudioCode -e --silent
+    set CODE_JUST_INSTALLED=1
 ) else (
     echo VSCode is already installed.
 )
 
-:: If VSCode was just installed, refresh path
-if defined CODEJUSTINSTALLED (
-    echo Waiting for VSCode to be added to PATH...
-    timeout /t 5
+:: ---------- 4. Refresh PATH if needed ----------
+if defined GIT_JUST_INSTALLED (
+    echo Adding Git to PATH...
+    set "GIT_PATH=C:\Program Files\Git\cmd"
+    setx PATH "%PATH%;%GIT_PATH%"
 )
 
-:: ---------- 5. Install VSCode Extensions ----------
+if defined CODE_JUST_INSTALLED (
+    echo Adding VSCode to PATH...
+    set "CODE_PATH=%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
+    setx PATH "%PATH%;%CODE_PATH%"
+)
+
+:: Refresh session PATH (for immediate use)
+set "PATH=%PATH%;C:\Program Files\Git\cmd"
+set "PATH=%PATH%;%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
+
+:: ---------- 5. Confirm VSCode CLI is available ----------
+where code >nul 2>nul
+if errorlevel 1 (
+    echo [ERROR] VSCode CLI 'code' still not recognized. Please restart terminal and re-run script.
+    exit /b 1
+)
+
+:: ---------- 6. Install VSCode Extensions ----------
 echo Installing VSCode Extensions...
 code --install-extension ms-python.python
 code --install-extension ms-python.vscode-pylance
@@ -77,43 +61,44 @@ code --install-extension ms-toolsai.jupyter
 code --install-extension formulahendry.terminal
 code --install-extension kisstkondoros.vscode-gutter-preview
 
-:: ---------- 6. Clone GitHub Repository ----------
-if exist ysp-exercises (
-    echo Repo folder already exists. Skipping clone.
-) else (
+:: ---------- 7. Clone Repository ----------
+if not exist ysp-exercises (
     echo Cloning GitHub repository...
     git clone https://github.com/roshnipai05/ysp-exercises
     if errorlevel 1 (
         echo [ERROR] Failed to clone repository.
         exit /b 1
     )
+) else (
+    echo Repository folder already exists. Skipping clone.
 )
 
 cd ysp-exercises
 
-:: ---------- 7. Create and Activate Virtual Environment ----------
+:: ---------- 8. Create and Activate Virtual Environment ----------
 echo Creating virtual environment...
 python -m venv venv
 
 echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
-:: ---------- 8. Install Dependencies ----------
+:: ---------- 9. Install Dependencies ----------
 if exist requirements.txt (
     echo Installing dependencies from requirements.txt...
     pip install --upgrade pip
     pip install -r requirements.txt
 ) else (
-    echo No requirements.txt found. Skipping dependency installation.
+    echo No requirements.txt found.
 )
 
-:: ---------- 9. Launch VSCode in Notebooks Folder ----------
+:: ---------- 10. Launch VSCode in 'notebooks' Folder ----------
 if exist notebooks (
     echo Opening 'notebooks' folder in VSCode...
     code notebooks
 ) else (
-    echo [WARNING] 'notebooks' folder not found. Opening repo root.
+    echo [WARNING] 'notebooks' folder not found. Opening project root instead.
     code .
 )
 
 endlocal
+
