@@ -1,15 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Store the base directory for later use
-set "BASE_DIR=%cd%"
-
 :: ---------- 1. Check Internet ----------
 echo Checking internet connection...
 ping -n 1 1.1.1.1 >nul
 if errorlevel 1 (
     echo [ERROR] No internet connection.
-    goto End
+    exit /b 1
 )
 
 :: ---------- 2. Check Python version ----------
@@ -26,19 +23,28 @@ for /f "tokens=1,2 delims=." %%a in ("%PYVER%") do (
 if not defined PYVER (
     echo Python not found. Installing Python %TARGET_VER%...
     winget install -e --id Python.Python.3.12
+    set PYJUSTINSTALLED=1
 ) else (
     if !MAJOR! LSS 3 (
         echo Python version too old. Installing Python %TARGET_VER%...
         winget install -e --id Python.Python.3.12
+        set PYJUSTINSTALLED=1
     ) else if !MAJOR!==3 if !MINOR! LSS 10 (
         echo Python version too old. Installing Python %TARGET_VER%...
         winget install -e --id Python.Python.3.12
+        set PYJUSTINSTALLED=1
     ) else (
         echo Python version is sufficient.
     )
 )
 
-:: ---------- 3. Check and Install Git ----------
+:: If Python was just installed, refresh path
+if defined PYJUSTINSTALLED (
+    echo Waiting for Python to be added to PATH...
+    timeout /t 5
+)
+
+:: ---------- 3. Install Git ----------
 where git >nul 2>nul
 if errorlevel 1 (
     echo Installing Git...
@@ -47,13 +53,20 @@ if errorlevel 1 (
     echo Git is already installed.
 )
 
-:: ---------- 4. Check and Install VSCode ----------
+:: ---------- 4. Install VSCode ----------
 where code >nul 2>nul
 if errorlevel 1 (
     echo Installing Visual Studio Code...
     winget install -e --id Microsoft.VisualStudioCode
+    set CODEJUSTINSTALLED=1
 ) else (
     echo VSCode is already installed.
+)
+
+:: If VSCode was just installed, refresh path
+if defined CODEJUSTINSTALLED (
+    echo Waiting for VSCode to be added to PATH...
+    timeout /t 5
 )
 
 :: ---------- 5. Install VSCode Extensions ----------
@@ -64,73 +77,43 @@ code --install-extension ms-toolsai.jupyter
 code --install-extension formulahendry.terminal
 code --install-extension kisstkondoros.vscode-gutter-preview
 
-:: ---------- 6. Clone Repository ----------
-echo Cloning GitHub repository...
-cd /d "%BASE_DIR%"
-git clone https://github.com/roshnipai05/ysp-exercises
-if errorlevel 1 (
-    echo [ERROR] Failed to clone the repository.
-    goto End
+:: ---------- 6. Clone GitHub Repository ----------
+if exist ysp-exercises (
+    echo Repo folder already exists. Skipping clone.
+) else (
+    echo Cloning GitHub repository...
+    git clone https://github.com/roshnipai05/ysp-exercises
+    if errorlevel 1 (
+        echo [ERROR] Failed to clone repository.
+        exit /b 1
+    )
 )
 
 cd ysp-exercises
 
-:: ---------- 7. Create Virtual Environment ----------
+:: ---------- 7. Create and Activate Virtual Environment ----------
 echo Creating virtual environment...
 python -m venv venv
-if errorlevel 1 (
-    echo [ERROR] Failed to create virtual environment.
-    goto End
-)
 
-call venv\Scripts\activate
-if errorlevel 1 (
-    echo [ERROR] Failed to activate virtual environment.
-    goto End
-)
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
 
 :: ---------- 8. Install Dependencies ----------
 if exist requirements.txt (
-    echo Installing Python dependencies...
+    echo Installing dependencies from requirements.txt...
     pip install --upgrade pip
     pip install -r requirements.txt
-    if errorlevel 1 (
-        echo [ERROR] Failed to install dependencies.
-        goto End
-    )
 ) else (
-    echo No requirements.txt found.
+    echo No requirements.txt found. Skipping dependency installation.
 )
 
-:: ---------- 9. Launch VSCode in 'notebooks' ----------
-set "NB_PATH=%cd%\notebooks"
-
-if exist "%NB_PATH%" (
-    echo Opening VSCode in: "%NB_PATH%"
-    code "%NB_PATH%"
-    if errorlevel 1 (
-        echo [ERROR] Failed to launch VSCode in notebooks folder.
-        set ERROR_FLAG=1
-    )
+:: ---------- 9. Launch VSCode in Notebooks Folder ----------
+if exist notebooks (
+    echo Opening 'notebooks' folder in VSCode...
+    code notebooks
 ) else (
-    echo [WARNING] 'notebooks' folder not found.
-    echo Launching VSCode in current folder instead...
+    echo [WARNING] 'notebooks' folder not found. Opening repo root.
     code .
-    if errorlevel 1 (
-        echo [ERROR] Failed to launch VSCode.
-        set ERROR_FLAG=1
-    )
 )
 
-:: ---------- Final Error Handling ----------
-:End
-echo.
-if "%ERROR_FLAG%"=="1" (
-    echo One or more errors occurred. The terminal will stay open for 30 seconds...
-    timeout /t 30
-) else (
-    echo Script completed successfully. Press any key to close.
-    pause
-)
-
-
+endlocal
