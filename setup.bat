@@ -103,17 +103,34 @@ if exist requirements.txt (
 )
 
 :: ---------- 9. Launch VSCode in 'notebooks' ----------
-if exist notebooks (
-    set "NB_PATH=%cd%\notebooks"
-    echo Opening VSCode in: !NB_PATH!
-    code "!NB_PATH!"
+set "NB_PATH=%cd%\notebooks"
+
+if exist "%NB_PATH%" (
+    echo Opening VSCode in: "%NB_PATH%"
+    code "%NB_PATH%"
+    if errorlevel 1 (
+        echo [ERROR] Failed to launch VSCode in notebooks folder.
+        set ERROR_FLAG=1
+    )
 ) else (
     echo [WARNING] 'notebooks' folder not found.
+    echo Launching VSCode in current folder instead...
     code .
+    if errorlevel 1 (
+        echo [ERROR] Failed to launch VSCode.
+        set ERROR_FLAG=1
+    )
 )
 
+:: ---------- Final Error Handling ----------
 :End
 echo.
-echo Script completed or terminated. Review the output above.
-pause
+if "%ERROR_FLAG%"=="1" (
+    echo One or more errors occurred. The terminal will stay open for 30 seconds...
+    timeout /t 30
+) else (
+    echo Script completed successfully. Press any key to close.
+    pause
+)
+
 
