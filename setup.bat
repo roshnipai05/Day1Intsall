@@ -25,21 +25,27 @@ if !errorlevel! neq 0 (
 )
 
     :: Quick Windows version check (must be Windows 10 1809+ or Windows 11)
-    for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
+    REM Extract version
+for /f "tokens=4-6 delims=. " %%i in ('ver') do (
+    set VERSION=%%i.%%j
+    set BUILD=%%k
+)
 
-     REM Check if version starts with 10.0 (Windows 10 or 11)
-     if not "%VERSION:~0,4%"=="10.0" (
+REM Check major version
+if not "!VERSION:~0,4!"=="10.0" (
     echo ERROR: Winget requires Windows 10 or Windows 11.
     pause
-    exit /b 1)
+    exit /b 1
+)
 
-REM Optional: Check for build number >= 18362 (Windows 10 1903) or higher for winget compatibility
-for /f "tokens=6 delims=. " %%k in ('ver') do set BUILD=%%k
-if %BUILD% lss 18362 (
+REM Check minimum build number
+if !BUILD! lss 18362 (
     echo ERROR: Winget requires Windows 10 version 1903 (build 18362) or later.
     pause
     exit /b 1
 )
+
+echo Windows version and build are OK.
 
     :: Create temp directory
     set "TEMP_DIR=%TEMP%\SoftwareInstall"
