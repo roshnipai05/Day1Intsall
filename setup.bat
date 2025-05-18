@@ -8,7 +8,7 @@ echo === Checking for required software ===
 echo Checking if winget is already installed...
 
 :: Check if winget exists by trying to run it
-where winget >nul 2>&1
+Get-Command winget >nul 2>&1
 if %errorlevel% equ 0 (
     echo Winget is already installed.
     winget --version
@@ -41,7 +41,7 @@ if %errorlevel% equ 0 (
 
     :: Verify installation
     set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
-    where winget >nul 2>&1
+    Get-Command winget >nul 2>&1
     if %errorlevel% equ 0 (
         echo Winget was successfully installed!
         winget --version
@@ -56,7 +56,7 @@ if %errorlevel% equ 0 (
         
         :: Update PATH again and check
         set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
-        where winget >nul 2>&1
+        Get-Command winget >nul 2>&1
         if %errorlevel% equ 0 (
             echo Winget was successfully installed after adding dependencies!
             winget --version
@@ -72,7 +72,7 @@ echo.
 echo Checking if Git is already installed...
 
 :: Check if git exists by trying to run it
-where git >nul 2>&1
+Get-Command git >nul 2>&1
 if %errorlevel% equ 0 (
     echo Git is already installed.
     git --version
@@ -93,7 +93,7 @@ if %errorlevel% equ 0 (
     for /f "tokens=*" %%p in ('powershell -Command "[System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH', 'User')"') do set "PATH=%%p"
     
     :: Verify Git installation
-    where git >nul 2>&1
+    Get-Command git >nul 2>&1
     if %errorlevel% equ 0 (
         echo Git was successfully installed!
         git --version
@@ -125,7 +125,7 @@ echo Refreshing environment variables after direct installation...
 for /f "tokens=*" %%p in ('powershell -Command "[System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH', 'User')"') do set "PATH=%%p"
 
 :: Verify installation
-where git >nul 2>&1
+Get-Command git >nul 2>&1
 if %errorlevel% equ 0 (
     echo Git was successfully installed via direct download!
     git --version
