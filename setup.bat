@@ -25,25 +25,34 @@ if !errorlevel! neq 0 (
 )
 
     :: Quick Windows version check (must be Windows 10 1809+ or Windows 11)
-    REM Extract version
-for /f "tokens=4-6 delims=. " %%i in ('ver') do (
-    set VERSION=%%i.%%j
-    set BUILD=%%k
+    :: Get the version string from `ver`
+for /f "tokens=2 delims=[]" %%i in ('ver') do set FULLVERSION=%%i
+
+:: Parse major, minor, and build numbers
+for /f "tokens=1-3 delims=." %%a in ("!FULLVERSION!") do (
+    set MAJOR=%%a
+    set MINOR=%%b
+    set BUILD=%%c
 )
 
-REM Check major version
-if not "!VERSION:~0,4!"=="10.0" (
+:: Debug print (optional)
+echo Detected Windows Version: !MAJOR!.!MINOR!.!BUILD!
+
+:: Check that it's Windows 10 or 11 (which both start with 10.0)
+if not "!MAJOR!.!MINOR!"=="10.0" (
     echo ERROR: Winget requires Windows 10 or Windows 11.
     pause
     exit /b 1
 )
 
-REM Check minimum build number
+:: Check minimum build number (18362 = Windows 10 version 1903)
 if !BUILD! lss 18362 (
     echo ERROR: Winget requires Windows 10 version 1903 (build 18362) or later.
     pause
     exit /b 1
 )
+
+echo Windows version is compatible.
 
 echo Windows version and build are OK.
 
