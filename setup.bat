@@ -2,12 +2,12 @@
 setlocal enabledelayedexpansion
 
 REM ===================== CONFIGURATION =====================
-SET REPO_URL= https://github.com/roshnipai05/ysp-exercises.git
-SET REPO_NAME= ysp-exercises
+SET REPO_URL=https://github.com/Makerspace-Ashoka/ysp-esp32-mesh-firmware.git
+SET REPO_NAME=ysp-esp32-mesh-firmware
 SET PYTHON_INSTALLER=https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe
 SET VSCODE_INSTALLER=https://update.code.visualstudio.com/latest/win32-x64-user/stable
 SET GIT_INSTALLER=https://github.com/git-for-windows/git/releases/download/v2.44.0.windows.1/Git-2.44.0-64-bit.exe
-SET REQUIREMENTS_URL=https://github.com/roshnipai05/ysp-exercises/blob/main/requirements.txt 
+SET REQUIREMENTS_URL=https://raw.githubusercontent.com/ysp-esp32-mesh-firmware/python-interface/src/requirements.txt
 
 REM ===================== CHECK FOR GIT =====================
 where git >nul 2>nul
@@ -80,8 +80,8 @@ echo [INFO] Installing dependencies from requirements.txt...
 pip install -r requirements.txt
 
 REM ===================== OPEN VSCODE =====================
-cd notebooks
-echo [INFO] Opening VSCode in notebooks folder...
+cd python-interface\src
+echo [INFO] Opening VSCode in project folder...
 code .
 
-endlocal
+endlocals
