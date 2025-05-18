@@ -6,8 +6,8 @@ echo Checking internet connection...
 ping -n 1 1.1.1.1 >nul
 if errorlevel 1 (
     echo [ERROR] No internet connection.
-    pause
 )
+pause
 
 :: ---------- 2. Install Git if missing ----------
 where git >nul 2>nul
@@ -50,8 +50,8 @@ set "PATH=%PATH%;%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
 where code >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] VSCode CLI 'code' still not recognized. Please restart terminal and re-run script.
-    pause
 )
+pause
 
 :: ---------- 6. Install VSCode Extensions ----------
 echo Installing VSCode Extensions...
@@ -67,8 +67,8 @@ if not exist ysp-exercises (
     git clone https://github.com/roshnipai05/ysp-exercises
     if errorlevel 1 (
         echo [ERROR] Failed to clone repository. Check your internet or GitHub access.
-        pause
     )
+    pause
 ) else (
     echo Repository folder already exists. Skipping clone.
 )
@@ -80,8 +80,8 @@ echo Creating virtual environment...
 python -m venv venv
 if errorlevel 1 (
     echo [ERROR] Failed to create virtual environment.
-    pause
 )
+pause
 
 echo Activating virtual environment...
 call venv\Scripts\activate.bat
@@ -93,8 +93,8 @@ if exist requirements.txt (
     pip install -r requirements.txt
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies.
-        pause
     )
+    pause
 ) else (
     echo No requirements.txt found.
 )
