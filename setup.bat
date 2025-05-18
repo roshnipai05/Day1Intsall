@@ -28,6 +28,9 @@ if errorlevel 1 (
 ) else (
     echo VSCode is already installed.
 )
+pause
+
+echo PLEASEPLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE PLEASE
 
 :: ---------- 4. Refresh PATH if needed ----------
 if defined GIT_JUST_INSTALLED (
@@ -41,6 +44,8 @@ if defined CODE_JUST_INSTALLED (
     set "CODE_PATH=%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin"
     setx PATH "%PATH%;%CODE_PATH%"
 )
+
+echo BLAHBLAHBLAHBLAHBLAHBLAHBLAHBLA!!!!!!!!!!!!!
 
 :: Refresh session PATH (for immediate use)
 set "PATH=%PATH%;C:\Program Files\Git\cmd"
