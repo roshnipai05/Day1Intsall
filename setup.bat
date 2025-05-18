@@ -1,73 +1,72 @@
 @echo off
-setlocal enabledelayedexpansion
+:: Simplified script to check for and install winget if not present
 
-REM ===================== CONFIGURATION =====================
-SET PYTHON_INSTALLER=https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe
-SET VSCODE_INSTALLER=https://update.code.visualstudio.com/latest/win32-x64-user/stable
-SET GIT_INSTALLER=https://github.com/git-for-windows/git/releases/download/v2.44.0.windows.1/Git-2.44.0-64-bit.exe
-SET REQUIREMENTS_URL=https://raw.githubusercontent.com/roshnipai05/ysp-exercises/main/requirements.txt
+echo Checking if winget is already installed...
 
-REM ===================== CHECK FOR GIT =====================
-where git >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [INFO] Git not found. Downloading Git...
-    powershell -Command "Invoke-WebRequest -Uri %GIT_INSTALLER% -OutFile git-installer.exe"
-    start /wait git-installer.exe /VERYSILENT
-    del git-installer.exe
-) ELSE (
-    echo [INFO] Git is already installed.
+:: Check if winget exists by trying to run it
+winget --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Winget is already installed on this system.
+    winget --version
+    goto :END
 )
 
-REM ========== CHECK FOR PYTHON >= 3.10 AND FUNCTIONAL ===========
-SET PYTHON=
-SET PYTHON_VERSION_OK=0
+echo Winget is not installed. Starting installation...
 
-(
-echo import sys
-echo major, minor = sys.version_info[:2]
-echo exit(0) if (major > 3 or (major == 3 and minor >= 10)) else exit(1)
-) > check_version.py
+:: Check for admin privileges
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Administrator privileges required. Please run as administrator.
+    pause
+    exit /b 1
+)
 
-FOR %%P IN (python python3 py) DO (
-    %%P --version >nul 2>&1
-    IF NOT ERRORLEVEL 1 (
-        %%P check_version.py >nul 2>&1
-        IF NOT ERRORLEVEL 1 (
-            SET PYTHON=%%P
-            SET PYTHON_VERSION_OK=1
-            GOTO FoundPython
-        )
+:: Quick Windows version check (must be Windows 10 1809+ or Windows 11)
+for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
+if "%VERSION%" neq "10.0" (
+    echo ERROR: Winget requires Windows 10 or Windows 11.
+    pause
+    exit /b 1
+)
+
+:: Create temp directory
+set "TEMP_DIR=%TEMP%\WingetInstall"
+if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
+
+:: Download and install winget
+echo Downloading and installing winget...
+powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile '%TEMP_DIR%\winget.msixbundle'; Add-AppxPackage -Path '%TEMP_DIR%\winget.msixbundle'}"
+
+:: Verify installation
+winget --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Winget was successfully installed!
+    winget --version
+) else (
+    echo Installation failed. You may need to install dependencies:
+    echo - Microsoft.UI.Xaml
+    echo - Microsoft.VCLibs.x64.14.00.Desktop
+    echo Attempting to install dependencies...
+    
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx' -OutFile '%TEMP_DIR%\VCLibs.appx'; Add-AppxPackage -Path '%TEMP_DIR%\VCLibs.appx'}"
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx' -OutFile '%TEMP_DIR%\UI.Xaml.appx'; Add-AppxPackage -Path '%TEMP_DIR%\UI.Xaml.appx'}"
+    
+    echo Trying winget installation again...
+    powershell -Command "& {Add-AppxPackage -Path '%TEMP_DIR%\winget.msixbundle'}"
+    
+    winget --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo Winget was successfully installed after adding dependencies!
+        winget --version
+    ) else (
+        echo Installation still failed. Please install winget manually from the Microsoft Store.
     )
 )
 
-:FoundPython
-DEL check_version.py
+:: Clean up
+rd /s /q "%TEMP_DIR%" 2>nul
 
-IF NOT "%PYTHON_VERSION_OK%"=="1" (
-    echo [INFO] Python >= 3.10 not found or not functional. Installing Python...
-    powershell -Command "Invoke-WebRequest -Uri %PYTHON_INSTALLER% -OutFile python-installer.exe"
-    start /wait python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
-    del python-installer.exe
-    SET PYTHON=python
-)
-
-echo [INFO] Using Python command: %PYTHON%
-
-REM ===================== CHECK FOR VSCODE =====================
-where code >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [INFO] VSCode not found. Downloading...
-    powershell -Command "Invoke-WebRequest -Uri %VSCODE_INSTALLER% -OutFile vscode-installer.exe"
-    start /wait vscode-installer.exe /silent
-    del vscode-installer.exe
-) ELSE (
-    echo [INFO] VSCode is already installed.
-)
-
-REM ========== INSTALL DEPENDENCIES ==========
-
-powershell -Command "Invoke-WebRequest -Uri %REQUIREMENTS_URL% -OutFile requirements.txt"
-echo [INFO] Installing dependencies from requirements.txt...
-pip install -r requirements.txt
-
-endlocal
+:END
+echo.
+echo Process completed.
+pause
