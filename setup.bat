@@ -1,5 +1,6 @@
 @echo off
 :: Simplified script to check for and install winget and Git if not present
+setlocal enabledelayedexpansion
 
 echo === Checking for required software ===
 
@@ -7,7 +8,7 @@ echo === Checking for required software ===
 echo Checking if winget is already installed...
 
 :: Check if winget exists by trying to run it
-winget --version >nul 2>&1
+where winget >nul 2>&1
 if %errorlevel% equ 0 (
     echo Winget is already installed.
     winget --version
@@ -39,7 +40,8 @@ if %errorlevel% equ 0 (
     powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile '%TEMP_DIR%\winget.msixbundle'; Add-AppxPackage -Path '%TEMP_DIR%\winget.msixbundle'}"
 
     :: Verify installation
-    winget --version >nul 2>&1
+    set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+    where winget >nul 2>&1
     if %errorlevel% equ 0 (
         echo Winget was successfully installed!
         winget --version
@@ -52,7 +54,9 @@ if %errorlevel% equ 0 (
         echo Trying winget installation again...
         powershell -Command "& {Add-AppxPackage -Path '%TEMP_DIR%\winget.msixbundle'}"
         
-        winget --version >nul 2>&1
+        :: Update PATH again and check
+        set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+        where winget >nul 2>&1
         if %errorlevel% equ 0 (
             echo Winget was successfully installed after adding dependencies!
             winget --version
@@ -68,31 +72,34 @@ echo.
 echo Checking if Git is already installed...
 
 :: Check if git exists by trying to run it
-git --version >nul 2>&1
+where git >nul 2>&1
 if %errorlevel% equ 0 (
     echo Git is already installed.
     git --version
 ) else (
     echo Git is not installed. Starting installation...
     
-    :: Check if winget is available (should be at this point)
-    winget --version >nul 2>&1
+    :: Use PowerShell to install Git with winget (more reliable)
+    echo Installing Git using winget via PowerShell...
+    powershell -Command "& {$process = Start-Process -FilePath 'winget' -ArgumentList 'install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements' -Wait -PassThru -NoNewWindow; if ($process.ExitCode -ne 0) {Write-Output 'Winget Git installation failed with exit code: ' + $process.ExitCode; exit 1}}"
+    
+    if %errorlevel% neq 0 (
+        echo Error during Git installation via winget. Trying direct download...
+        goto :DIRECT_GIT
+    )
+    
+    :: Refresh environment variables and check Git installation
+    echo Refreshing environment variables...
+    for /f "tokens=*" %%p in ('powershell -Command "[System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH', 'User')"') do set "PATH=%%p"
+    
+    :: Verify Git installation
+    where git >nul 2>&1
     if %errorlevel% equ 0 (
-        :: Install Git using winget
-        echo Installing Git using winget...
-        winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements
-        
-        :: Verify Git installation
-        git --version >nul 2>&1
-        if %errorlevel% equ 0 (
-            echo Git was successfully installed!
-            git --version
-        ) else (
-            echo Git installation via winget failed. Trying direct download...
-            goto :DIRECT_GIT
-        )
+        echo Git was successfully installed!
+        git --version
     ) else (
-        echo Winget is not available. Trying direct download for Git...
+        echo Git installation via winget appears to have completed, but Git command not found.
+        echo This may be because Git is not in your PATH. Trying direct download...
         goto :DIRECT_GIT
     )
 )
@@ -111,15 +118,21 @@ powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.Secur
 
 :: Run Git installer silently
 echo Running Git installer...
-start /wait "" "%TEMP_DIR%\GitInstaller.exe" /VERYSILENT /NORESTART
+call "%TEMP_DIR%\GitInstaller.exe" /VERYSILENT /NORESTART
+
+:: Refresh environment variables again
+echo Refreshing environment variables after direct installation...
+for /f "tokens=*" %%p in ('powershell -Command "[System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH', 'User')"') do set "PATH=%%p"
 
 :: Verify installation
-git --version >nul 2>&1
+where git >nul 2>&1
 if %errorlevel% equ 0 (
     echo Git was successfully installed via direct download!
     git --version
 ) else (
-    echo Git installation failed. Please install Git manually from https://git-scm.com/download/win
+    echo Git installation failed. You may need to restart your computer for PATH changes to take effect.
+    echo After restarting, you can verify the installation by typing 'git --version' in a new command prompt.
+    echo If Git still isn't found, please install Git manually from https://git-scm.com/download/win
 )
 
 :CLEANUP
@@ -132,3 +145,4 @@ if defined TEMP_DIR (
 echo.
 echo Process completed.
 pause
+endlocal
