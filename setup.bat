@@ -7,7 +7,6 @@ ping -n 1 1.1.1.1 >nul
 if errorlevel 1 (
     echo [ERROR] No internet connection.
     pause
-    exit /b 1
 )
 
 :: ---------- 2. Install Git if missing ----------
@@ -52,7 +51,6 @@ where code >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] VSCode CLI 'code' still not recognized. Please restart terminal and re-run script.
     pause
-    exit /b 1
 )
 
 :: ---------- 6. Install VSCode Extensions ----------
@@ -70,7 +68,6 @@ if not exist ysp-exercises (
     if errorlevel 1 (
         echo [ERROR] Failed to clone repository. Check your internet or GitHub access.
         pause
-        exit /b 1
     )
 ) else (
     echo Repository folder already exists. Skipping clone.
@@ -84,7 +81,6 @@ python -m venv venv
 if errorlevel 1 (
     echo [ERROR] Failed to create virtual environment.
     pause
-    exit /b 1
 )
 
 echo Activating virtual environment...
@@ -98,7 +94,6 @@ if exist requirements.txt (
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies.
         pause
-        exit /b 1
     )
 ) else (
     echo No requirements.txt found.
