@@ -1,12 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Store the base directory for later use
+set "BASE_DIR=%cd%"
+
 :: ---------- 1. Check Internet ----------
 echo Checking internet connection...
 ping -n 1 1.1.1.1 >nul
 if errorlevel 1 (
     echo [ERROR] No internet connection.
-    exit /b 1
+    goto End
 )
 
 :: ---------- 2. Check Python version ----------
@@ -63,30 +66,54 @@ code --install-extension kisstkondoros.vscode-gutter-preview
 
 :: ---------- 6. Clone Repository ----------
 echo Cloning GitHub repository...
+cd /d "%BASE_DIR%"
 git clone https://github.com/roshnipai05/ysp-exercises
+if errorlevel 1 (
+    echo [ERROR] Failed to clone the repository.
+    goto End
+)
+
 cd ysp-exercises
 
 :: ---------- 7. Create Virtual Environment ----------
 echo Creating virtual environment...
 python -m venv venv
+if errorlevel 1 (
+    echo [ERROR] Failed to create virtual environment.
+    goto End
+)
+
 call venv\Scripts\activate
+if errorlevel 1 (
+    echo [ERROR] Failed to activate virtual environment.
+    goto End
+)
 
 :: ---------- 8. Install Dependencies ----------
 if exist requirements.txt (
     echo Installing Python dependencies...
     pip install --upgrade pip
     pip install -r requirements.txt
+    if errorlevel 1 (
+        echo [ERROR] Failed to install dependencies.
+        goto End
+    )
 ) else (
     echo No requirements.txt found.
 )
 
-:: ---------- 9. Launch VSCode in 'notebooks' Folder ----------
+:: ---------- 9. Launch VSCode in 'notebooks' ----------
 if exist notebooks (
-    echo Launching VSCode in 'notebooks' folder...
-    code notebooks
+    set "NB_PATH=%cd%\notebooks"
+    echo Opening VSCode in: !NB_PATH!
+    code "!NB_PATH!"
 ) else (
     echo [WARNING] 'notebooks' folder not found.
     code .
 )
 
-endlocal
+:End
+echo.
+echo Script completed or terminated. Review the output above.
+pause
+
