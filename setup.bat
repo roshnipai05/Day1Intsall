@@ -49,7 +49,8 @@ if !errorlevel! neq 0 (
         powershell -Command "& {Add-AppxPackage -Path '%TEMP_DIR%\winget.msixbundle'}"
         
         :: Update PATH again and check
-        set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+        :: set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+        [Environment]::SetEnvironmentVariable("PATH", $env:PATH + "%LOCALAPPDATA%\Microsoft\WindowsApps", "User")      
         Get-Command winget >nul 2>&1
         if %errorlevel% equ 0 (
             echo Winget was successfully installed after adding dependencies!
